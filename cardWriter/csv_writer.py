@@ -1,0 +1,2 @@
+def writeCardToCSV():
+    pass
