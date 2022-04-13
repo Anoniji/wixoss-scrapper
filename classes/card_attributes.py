@@ -1,4 +1,5 @@
 # Attributes for the card
+import string
 from enum import Enum, unique
 
 
@@ -52,5 +53,21 @@ class EffectSymbol:
         self. symbolText = symbolText
         self. position = position
 
+
+class Cost:
+    def __init__(self, amount: int, color: COLORS):
+        pass
+
+
+class Effect:
+    def __init__(self, effect: string, cost: list[Cost]):
+        self.effect = effect
+        self.cost = cost
+
+
+class CardEffects:
+    def __init__(self, effects: list[string] = None, lifeBust: string = None):
+        self.effects = effects
+        self.lifeBurst = lifeBust
 
 

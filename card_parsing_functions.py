@@ -1,7 +1,8 @@
-import json
 import string
+
 from classes.WixossCard import WixossCard
-from helpers.card_attributes import CardAttributeLabels
+from classes.CardSetInfo import CardSetInfo
+from classes.card_attributes import CardAttributeLabels, CardEffects
 
 from helpers import helper_functions
 from selenium.webdriver.common.by import By
@@ -9,18 +10,22 @@ from selenium.webdriver.remote.webelement import WebElement
 
 
 def parse_card(mainContents: WebElement, contentHeader: WebElement):
+    imageDownloadPath = 'resources/cardImages/'
     # Name of Card
-    cardNameWithNumber = contentHeader.find_element(By.CSS_SELECTOR, 'div.sec_inner h2').text
-    setNumber = contentHeader.find_element(By.CSS_SELECTOR, 'div.sec_inner h2 span').text
-    cardName = cardNameWithNumber.replace(setNumber, "").replace('\n', "")
+    cardNameWithSerial = contentHeader.find_element(By.CSS_SELECTOR, 'div.sec_inner h2').text
+    serialNumber = contentHeader.find_element(By.CSS_SELECTOR, 'div.sec_inner h2 span').text
+    cardName = cardNameWithSerial.replace(serialNumber, "").replace('\n', "")
     cardName = cardName.replace('\u266f', "#")
     rarity = contentHeader.find_element(By.CSS_SELECTOR, 'p.rarelity').text
 
     # Card Image
-    thumbNail = mainContents.find_element(By.CSS_SELECTOR, 'div.imageBox img')
+    thumbNail = mainContents.find_element(By.CSS_SELECTOR, 'div.imageBox img').get_attribute('src')
+    filepath = helper_functions.download_image(imageDownloadPath, thumbNail, serialNumber + '.jpg')
 
     parsed_card = WixossCard(card_name=cardName, rarity=rarity)
-    parsed_card.image_src_url = thumbNail.get_attribute('src')
+    parsed_card.image_src_url = thumbNail
+    parsed_card.image_path = filepath
+    parsed_card.serial = CardSetInfo(serialNumber)
 
     # list of tags, and their values in separate arrays
     descTags = mainContents.find_elements(By.TAG_NAME, 'dt')
@@ -32,21 +37,10 @@ def parse_card(mainContents: WebElement, contentHeader: WebElement):
     # Effects Section
     effectsAndLifeBursts = mainContents.find_elements(By.TAG_NAME, 'div.fullWidth')
 
-    if cTValue == helper_functions.CENTER_LRIG:
-        get_center_LRIG_info(parsed_card, descTags, descTagValues, cTValue)
-    elif cTValue == helper_functions.ASSIST_LRIG:
-        get_assist_LRIG_info(parsed_card, descTags, descTagValues, cTValue)
-    elif cTValue == helper_functions.SIGNI:
-        get_signi_info(parsed_card, descTags, descTagValues, cTValue)
-    elif cTValue == helper_functions.PIECE:
-        get_piece_info(parsed_card, descTags, descTagValues, cTValue)
-    elif cTValue == helper_functions.SPELL:
-        get_spell_info(parsed_card, descTags, descTagValues, cTValue)
+    get_card_info(parsed_card, descTags, descTagValues, cTValue)
 
     card_effects = helper_functions.get_effects(effectsAndLifeBursts)
     assign_abilities(parsed_card, card_effects)
-
-    #print(parsed_card.__dict__)
     return parsed_card
 
 
@@ -95,33 +89,6 @@ def get_card_info(parsed_card: WixossCard, descTags: list[WebElement], descTagVa
         assign_attribute(parsed_card, cardAttributeLabel, cardAttributeValue)
 
 
-# Center LRIG
-def get_center_LRIG_info(parsed_card: WixossCard, descTags: list[WebElement], descTagValues: list[WebElement], cTValue: string):
-    get_card_info(parsed_card, descTags, descTagValues, cTValue)
-
-
-# Assist LRIG
-def get_assist_LRIG_info(parsed_card: WixossCard, descTags: list[WebElement], descTagValues: list[WebElement], cTValue):
-    get_center_LRIG_info(parsed_card, descTags, descTagValues, cTValue)
-    #helper_functions.get_timing(descTags, descTagValues)
-
-
-# SIGNI
-def get_signi_info(parsed_card: WixossCard, descTags: list[WebElement], descTagValues: list[WebElement], cTValue: string):
-    get_card_info(parsed_card, descTags, descTagValues, cTValue)
-
-
-# Piece
-def get_piece_info(parsed_card: WixossCard, descTags: list[WebElement], descTagValues: list[WebElement], cTValue: string):
-    get_card_info(parsed_card, descTags, descTagValues, cTValue)
-    #helper_functions.get_timing(descTags, descTagValues)
-
-
-# Spell
-def get_spell_info(parsed_card: WixossCard, descTags: list[WebElement], descTagValues: list[WebElement], cTValue: string):
-    get_card_info(parsed_card, descTags, descTagValues, cTValue)
-
-
 # Assign attributes based on the value
 def assign_attribute(parsed_card: WixossCard, cardAttributeLabel: string, cardAttributeValue: string):
     match cardAttributeLabel:
@@ -152,17 +119,18 @@ def assign_attribute(parsed_card: WixossCard, cardAttributeLabel: string, cardAt
 
 
 # Assign the effects and life burst to the card
-def assign_abilities(parsed_card: WixossCard, card_effects):
-    if card_effects[0] != '-':
+def assign_abilities(parsed_card: WixossCard, card_effects: CardEffects):
+    if card_effects.effects[0] != '-':
         parsed_card.has_effects = True
     else:
         parsed_card.has_effects = False
-    if card_effects[1] != '-':
+    if card_effects.lifeBurst != '-':
         parsed_card.has_life_burst = True
     else:
         parsed_card.has_life_burst = False
-    parsed_card.effects = card_effects[0]
-    parsed_card.life_burst = card_effects[1]
+
+    parsed_card.effects = card_effects.effects
+    parsed_card.life_burst = card_effects.lifeBurst
 
 
 # Sanitize the Values

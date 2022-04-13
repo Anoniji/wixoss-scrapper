@@ -1,18 +1,19 @@
+import io
 import json
+import os
 import re
-
-
-# Colors
+import requests
 import unicodedata
+from PIL import Image
 from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webelement import WebElement
 
 from classes import WixossCard
-from helpers.card_attributes import CardAbilityKeywords, EffectSymbol, COLORS
+from classes.card_attributes import CardAbilityKeywords, EffectSymbol, COLORS, CardEffects
 
 
 
-
+"""
 # TODO: DELETE THIS
 BLACK = 'black'
 BLUE = 'blue'
@@ -20,6 +21,7 @@ GREEN = 'green'
 RED = 'red'
 WHITE = 'white'
 COLORLESS = 'null'
+"""
 
 # Card Types
 CENTER_LRIG = 'LRIG'
@@ -29,9 +31,10 @@ PIECE = 'PIECE'
 SPELL = 'SPELL'
 PROMO = 'PR'
 
+"""
 # TODO: DELETE THIS
 colors = [BLACK, BLUE, GREEN, RED, WHITE, COLORLESS]
-
+"""
 
 # Get color from cost, when it is abbreviated with a single character
 def get_cost_color(cost_char):
@@ -79,28 +82,25 @@ def get_colors_and_cost(costString):
     # Effects is effects[0]
     # LifeBurst is effects[1]
     # effects[3] is unknown right now, sig for sanbaka?
-    # TODO: Effects will have to have further parsing to detect images such as "TEAM" "AUTO" "TAP" "ONCE PER TURN" ETC
 def get_effects(effectsAndLifebursts: list[WebElement]):
-    effectsArray = []
     if (len(effectsAndLifebursts)) != 0:
         effect = effectsAndLifebursts[0].text
         lifeBurst = effectsAndLifebursts[1].text
 
         if effect != '-':
-            effect = parse_effects(effectsAndLifebursts[0])
-            #effect = re.sub(r': ', '', effect)
-            #effect = re.sub(r'\u3010', '[', effect)  # Kept as a redundancy
-            #effect = re.sub(r'\u3011', ']', effect)  # Kept as a redundancy
+            effectsAsString = parse_effects(effectsAndLifebursts[0])
+            effect = effectsAsString.split(';')
+        else:
+            effect = ['-']
         if lifeBurst != '-':
             lifeBurst = parse_effects(effectsAndLifebursts[1])
-        effectsArray.append(effect)
-        effectsArray.append(lifeBurst)
-    return effectsArray
+        cardEffect = CardEffects(effect, lifeBurst)
+        return cardEffect
 
 
 # Effects shouldn't have full width symbols, usually only CJK and circled digits
-def parse_effects(string: WebElement):
-    returnString = parse_symbols(string)
+def parse_effects(element: WebElement):
+    returnString = parse_symbols(element)
     returnString = parse_CJK_chars(returnString)
     returnString = parse_circle_digits(returnString)
     return returnString
@@ -215,13 +215,25 @@ def parse_circle_digits(string):
     returnString = re.sub(r'\u2463', '(4)', returnString)
     return returnString
 
-# Timing TODO: This is obs
-def get_timing(descTags: list[WebElement], descTagValues: list[WebElement]):
-    timing = descTags[9].text
-    timingValue = descTagValues[9].text
-    #print(timing, ' | ', timingValue)
-
 
 # Convert class to json
 def card_to_JSON(card: WixossCard):
-    return json.dumps(card.__dict__)
+    return json.dumps(card.asDict())
+
+
+# Download the image to the specified path
+def download_image(downloadPath, imageURL, fileName):
+    imageContent = requests.get(imageURL).content
+    imageFile = io.BytesIO(imageContent)
+    image = Image.open(imageFile)
+    filePath = downloadPath + fileName
+
+    if not os.path.isfile(filePath):
+        with open(filePath, "wb") as f:
+            image.save(f, "JPEG")
+        #print('Image Saved')
+    else:
+        pass
+        #print('Image already Exists')
+    return filePath
+

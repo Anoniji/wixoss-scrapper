@@ -1,4 +1,9 @@
+import json
 import string
+
+
+def to_dict(obj):
+    return json.loads(json.dumps(obj, default=lambda o: o.__dict__))
 
 
 class WixossCard:
@@ -22,7 +27,9 @@ class WixossCard:
             coin=None,
             set_format=None,
             image_src_url=None,
-            timing=None
+            timing=None,
+            image_path=None,
+            serial=None
     ):
         self.card_name = card_name
         self.rarity = rarity
@@ -43,3 +50,10 @@ class WixossCard:
         self.set_format = set_format
         self.image_src_url = image_src_url
         self.timing = timing
+        self.image_path = image_path
+        self.serial = serial
+
+    def asDict(self):
+        wixossDict = self.__dict__
+        wixossDict['serial'] = to_dict(self.serial)
+        return wixossDict
