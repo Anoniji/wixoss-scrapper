@@ -1,4 +1,6 @@
 import json
+import os.path
+from string import Template
 
 import card_parsing_functions
 from selenium import webdriver
@@ -15,61 +17,32 @@ from resources.localenv import DRIVER_LOCATION, TAKARATOMY_LINK
 if __name__ == '__main__':
     ser = Service(DRIVER_LOCATION)
     ops = webdriver.ChromeOptions()
-    ops.headless = True  # headless causes issues when changing pages
+    #ops.headless = True  # headless causes issues when changing pages
     ops.add_argument('--window-size=1920,1080')
     ops.add_argument('--start-maximized')
     ops.add_argument('--lang=en_US') # Required to make it run headless
     driver = webdriver.Chrome(service=ser, options=ops)
     driver.get(TAKARATOMY_LINK)
-
     parentWindow = driver.window_handles[0]
 
     # Page Navigation Buttons
     pageButtons = driver.find_elements(By.CSS_SELECTOR, 'div.page-nav div.pure-button')
     nextButton = driver.find_element(By.XPATH, '//*[@id="app"]/section/div[2]/div[4]/div[21]')
 
-    csvPath = './resources/cards.csv'
     jsonPath = './resources/cards.json'
 
-    """
-    # file = open(jsonPath, 'w', encoding='utf-8')
-    # file = open(csvPath, 'w', newline="", encoding='utf-8')
-    headers = (['serial',
-                'card_name',
-                'rarity',
-                'card_type',
-                'lrig_type_or_class',
-                'color',
-                'level',
-                'grow_cost',
-                'cost',
-                'limit',
-                'power',
-                'team',
-                'timing',
-                'effects',
-                'life_burst',
-                'has_effects',
-                'has_life_burst',
-                'coin',
-                'set_format',
-                'image_src_url',
-                'image_path'])
-    # writer = csv.DictWriter(file, fieldnames=headers)
-    # writer.writeheader()
-    """
-
+    totalCardCount = driver.find_element(By.CSS_SELECTOR, 'p.results').text
     # For loop
     # for i in range(0, len(pageButtons)):
+    currentCardCount = 0
     for i in range(0, 2):
-        print('iteration: ', i)
+        print('Page: ', i+1)
         wait = WebDriverWait(driver, 30)
         wait.until(expected_conditions.visibility_of_any_elements_located((By.CSS_SELECTOR, 'div.sec_inner div.card')))
         cards = driver.find_elements(By.CSS_SELECTOR, 'div.sec_inner div.card')
 
         # for j in range(1, len(cards)):
         for j in range(1, 4):
-            print('card: ', j)
             cardToParse = cards[j]
 
             # open the card in a new window
@@ -95,16 +68,18 @@ if __name__ == '__main__':
                     data = json.load(file)
                     temp = data["cardData"]
                     temp.append(parsedCard.asDict())
-                    print(data)
                 with open(jsonPath, 'w', encoding='utf-8') as file:
                     file.write(json.dumps(data, indent=4))
-                print('appending')
             except:
+                if os.path.exists(jsonPath):
+                    os.remove(jsonPath)
+                    print('Starting new Json file')
                 with open(jsonPath, "w", encoding='utf-8') as outfile:
                     data = {"cardData": [parsedCard.asDict()]}
                     outfile.write(json.dumps(data, indent=4))
-                print('new')
-
+            currentCardCount += 1
+            currentCardOutput = Template('Card $currentCardCount processed')
+            print(currentCardOutput.substitute(currentCardCount=currentCardCount))
             # close current tab and go back to parent window
             driver.close()
 
@@ -116,5 +91,6 @@ if __name__ == '__main__':
         # Nav to next page
         nextButton.click()
         driver.switch_to.window(parentWindow)
-
     driver.quit()
+    t = Template('Completed $currentCardCount out of $totalCardCount')
+    print(t.substitute(currentCardCount=currentCardCount, totalCardCount=totalCardCount))
