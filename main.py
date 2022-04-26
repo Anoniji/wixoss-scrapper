@@ -1,5 +1,6 @@
 import json
 import os.path
+import time
 from string import Template
 
 import card_parsing_functions
@@ -10,7 +11,6 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions
-import csv
 
 from resources.localenv import DRIVER_LOCATION, TAKARATOMY_LINK
 
@@ -35,14 +35,17 @@ if __name__ == '__main__':
     # For loop
     # for i in range(0, len(pageButtons)):
     currentCardCount = 0
-    for i in range(0, 2):
+
+    # Iniate timer
+    tic = time.perf_counter()
+    for i in range(0, 1):
         print('Page: ', i+1)
-        wait = WebDriverWait(driver, 30)
+        wait = WebDriverWait(driver, 60)
         wait.until(expected_conditions.visibility_of_any_elements_located((By.CSS_SELECTOR, 'div.sec_inner div.card')))
         cards = driver.find_elements(By.CSS_SELECTOR, 'div.sec_inner div.card')
 
         # for j in range(1, len(cards)):
-        for j in range(1, 4):
+        for j in range(1, 13):
             cardToParse = cards[j]
 
             # open the card in a new window
@@ -62,7 +65,10 @@ if __name__ == '__main__':
             cardHeaderContents = driver.find_element(By.CSS_SELECTOR, 'div.contents_header')
             parsedCard = card_parsing_functions.parse_card(cardMainContents, cardHeaderContents)
 
-            # writer.writerow(parsedCard.__dict__)
+            """
+                The Json file must be manually deleted after each run during the testing phase
+                The except allows you to create a new json file from an empty one
+            """
             try:
                 with open(jsonPath, 'r', encoding='utf-8') as file:
                     data = json.load(file)
@@ -92,5 +98,7 @@ if __name__ == '__main__':
         nextButton.click()
         driver.switch_to.window(parentWindow)
     driver.quit()
+    toc = time.perf_counter()
     t = Template('Completed $currentCardCount out of $totalCardCount')
     print(t.substitute(currentCardCount=currentCardCount, totalCardCount=totalCardCount))
+    print(f"Program End: Downloaded the cards in {toc - tic:0.4f} seconds")

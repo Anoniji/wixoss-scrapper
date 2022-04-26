@@ -5,23 +5,13 @@ import re
 import requests
 import unicodedata
 from PIL import Image
-from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webelement import WebElement
 
 from classes import WixossCard
-from classes.card_attributes import CardAbilityKeywords, EffectSymbol, COLORS, CardEffects
+from classes.Costs import ColorCost
+from classes.card_attributes import COLORS, CardEffects
+from helpers.parseEffects import parse_string
 
-
-
-"""
-# TODO: DELETE THIS
-BLACK = 'black'
-BLUE = 'blue'
-GREEN = 'green'
-RED = 'red'
-WHITE = 'white'
-COLORLESS = 'null'
-"""
 
 # Card Types
 CENTER_LRIG = 'LRIG'
@@ -31,10 +21,6 @@ PIECE = 'PIECE'
 SPELL = 'SPELL'
 PROMO = 'PR'
 
-"""
-# TODO: DELETE THIS
-colors = [BLACK, BLUE, GREEN, RED, WHITE, COLORLESS]
-"""
 
 # Get color from cost, when it is abbreviated with a single character
 def get_cost_color(cost_char):
@@ -54,28 +40,24 @@ def get_color(srcString):
     returnColor = ''
     for color in COLORS:
         if color.value.casefold() in srcString.casefold():
-            returnColor = color
+            returnColor = color.name
     return returnColor
 
 
 # Get Colors and their cost from the card, usually for spells and pieces
 def get_colors_and_cost(costString):
     color_cost_array = costString.split(' ')
-    parsed_colors_and_cost = ''
+    parsed_colors_and_cost = []
     if costString != '-':
         for color_and_cost in color_cost_array:
             item_pair = color_and_cost.split('×')
-            #color_char_without_brackets = item_pair[0].replace('《', '', 1).replace('》', '', 1)
-            #color = get_cost_color(color_char_without_brackets)
-            color = get_cost_color(item_pair[0])
-            cost = item_pair[1]
-            parsed_item_pair = color + ' x ' + cost
-            if len(parsed_colors_and_cost) > 0:
-                parsed_colors_and_cost += ';'
-            parsed_colors_and_cost += parsed_item_pair
+            color = parse_full_width_string(get_cost_color(item_pair[0]))
+            cost = parse_full_width_string(item_pair[1])
+            parsed_item_pair = ColorCost(color, cost)
+            parsed_colors_and_cost.append(parsed_item_pair)
         return parsed_colors_and_cost
     else:
-        return costString
+        return None
 
 
 # Get Effects Section
@@ -86,116 +68,24 @@ def get_effects(effectsAndLifebursts: list[WebElement]):
     if (len(effectsAndLifebursts)) != 0:
         effect = effectsAndLifebursts[0].text
         lifeBurst = effectsAndLifebursts[1].text
-
         if effect != '-':
-            effectsAsString = parse_effects(effectsAndLifebursts[0])
-            effect = effectsAsString.split(';')
+            effect = parse_string(effectsAndLifebursts[0].get_attribute('innerHTML')).split('\n')
         else:
             effect = ['-']
         if lifeBurst != '-':
-            lifeBurst = parse_effects(effectsAndLifebursts[1])
+            lifeBurst = parse_string(effectsAndLifebursts[1].get_attribute('innerHTML')).split('\n')
         cardEffect = CardEffects(effect, lifeBurst)
         return cardEffect
-
-
-# Effects shouldn't have full width symbols, usually only CJK and circled digits
-def parse_effects(element: WebElement):
-    returnString = parse_symbols(element)
-    returnString = parse_CJK_chars(returnString)
-    returnString = parse_circle_digits(returnString)
-    return returnString
-
-
-# Convert image symbols for certain effects (Auto, team, once per turn, etc)
-def parse_symbols(effects: WebElement):
-    parsedString = ''
-    images = effects.find_elements(By.CSS_SELECTOR, '*')
-    # Convert the images to text
-    prefixArray = []
-    for i in range(0, len(images)):
-        symbolImageUrl = images[i].get_attribute('src')
-        for prefix in CardAbilityKeywords:
-            if symbolImageUrl.find(prefix) != -1:
-                convertedSymbol = convert_symbol(prefix)
-                if convertedSymbol.startswith('['):
-                    convertedPrefix = EffectSymbol(convertedSymbol, 'middle')
-                else:
-                    convertedPrefix = EffectSymbol(convertedSymbol, 'start')
-                prefixArray.append(convertedPrefix)
-                continue
-        for color in COLORS:
-            if symbolImageUrl.find(color) != -1:
-                convertedColor = EffectSymbol(convert_color(color), 'end')
-                prefixArray.append(convertedColor)
-                continue
-    # Get the text
-    text = effects.text
-    splitText = text.split('\n')
-    for j in range(0, len(splitText)):
-        if len(prefixArray) >= 1:
-            effectText = splitText[j].lstrip().rstrip()
-            parsedString += prefixArray[0].symbolText
-            prefixArray.pop(0)
-            while len(prefixArray) >= 1 and prefixArray[0].position != 'start':
-                parsedString += prefixArray[0].symbolText
-                prefixArray.pop(0)
-            parsedString += effectText
-            if j != len(splitText)-1:
-                parsedString += ';'
-    if parsedString == '':
-        parsedString = text
-    return parsedString
-
-
-def convert_color(color: COLORS):
-    symbol = ''
-    match color:
-        case COLORS.BLACK:
-            symbol = '(Blk)'
-        case COLORS.BLUE:
-            symbol = '(Blu)'
-        case COLORS.GREEN:
-            symbol = '(Grn)'
-        case COLORS.RED:
-            symbol = '(Red)'
-        case COLORS.WHITE:
-            symbol = '(Wht)'
-        case COLORS.COLORLESS:
-            symbol = '(Any)'
-    return symbol
-
-# Map the keyword enum to a text friendly conversion
-def convert_symbol(keyword: CardAbilityKeywords):
-    symbol = ''
-    match keyword:
-        case CardAbilityKeywords.CONST:
-            symbol = '(CONST)'
-        case CardAbilityKeywords.ENTER:
-            symbol = '(ENTER)'
-        case CardAbilityKeywords.ACTION:
-            symbol = '(ACTION)'
-        case CardAbilityKeywords.AUTO:
-            symbol = '(AUTO)'
-        case CardAbilityKeywords.ONCE_PER_TURN:
-            symbol = '[Once]'
-        case CardAbilityKeywords.TEAM:
-            symbol = '(TEAM)'
-        case CardAbilityKeywords.AUTO_TEAM:
-            symbol = '(TEAM AUTO)'
-        case CardAbilityKeywords.ACTION_TEAM:
-            symbol = '(TEAM ACTION)'
-        case CardAbilityKeywords.CONSTANT_TEAM:
-            symbol = '(TEAM CONST)'
-        case CardAbilityKeywords.ENTER_TEAM:
-            symbol = '(TEAM ENTER)'
-        case CardAbilityKeywords.TAP:
-            symbol = '[TAP CARD]'
-    return symbol
 
 
 # Parse the string and convert full width to normal
 def parse_full_width_string(string):
     return unicodedata.normalize('NFKC', string)
+
+
+# Convert class to json
+def card_to_JSON(card: WixossCard):
+    return json.dumps(card.classAsDict())
 
 
 # Parse the string and convert CJK Chars to csv readable ones
@@ -213,12 +103,8 @@ def parse_circle_digits(string):
     returnString = re.sub(r'\u2461', '(2)', returnString)
     returnString = re.sub(r'\u2462', '(3)', returnString)
     returnString = re.sub(r'\u2463', '(4)', returnString)
+    returnString = re.sub(r'\u2014', '-', returnString) # technically not a circle digit but w/e
     return returnString
-
-
-# Convert class to json
-def card_to_JSON(card: WixossCard):
-    return json.dumps(card.asDict())
 
 
 # Download the image to the specified path

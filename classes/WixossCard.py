@@ -26,10 +26,9 @@ class WixossCard:
             has_life_burst=None,
             coin=None,
             set_format=None,
-            image_src_url=None,
             timing=None,
-            image_path=None,
-            serial=None
+            serial=None,
+            image=None
     ):
         self.card_name = card_name
         self.rarity = rarity
@@ -48,12 +47,14 @@ class WixossCard:
         self.has_life_burst = has_life_burst
         self.coin = coin
         self.set_format = set_format
-        self.image_src_url = image_src_url
         self.timing = timing
-        self.image_path = image_path
         self.serial = serial
+        self.image = image
 
     def asDict(self):
         wixossDict = self.__dict__
         wixossDict['serial'] = to_dict(self.serial)
+        wixossDict['image'] = to_dict(self.image)
+        wixossDict['cost'] = to_dict(self.cost)
+        wixossDict['grow_cost'] = to_dict(self.grow_cost)
         return wixossDict
