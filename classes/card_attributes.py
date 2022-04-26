@@ -1,6 +1,7 @@
 # Attributes for the card
 import string
 from enum import Enum, unique
+from helpers.ClassAsDict import classAsDict
 
 
 @unique
@@ -36,6 +37,10 @@ class CardAbilityKeywords(str, Enum):
     CONSTANT_TEAM = 'regular_team'
     ENTER_TEAM = 'arrival_team'
     TAP = 'down'
+    RISE = 'rise'
+    ONCE_PER_GAME = 'game_01'
+    HARMONY = '[Harmony]'
+    USE_CONDITIONS = 'terms_use'
 
 
 @unique
@@ -47,20 +52,15 @@ class COLORS(str, Enum):
     WHITE = 'white'
     COLORLESS = 'null'
 
-
-class EffectSymbol:
-    def __init__(self, symbolText, position):
-        self. symbolText = symbolText
-        self. position = position
-
-
-class Cost:
-    def __init__(self, amount: int, color: COLORS):
-        pass
+    def asDict(self):
+        classAsDict(self)
 
 
 class Effect:
-    def __init__(self, effect: string, cost: list[Cost]):
+    def __init__(self, baseStringEffect: string, effectType, condition, effect, cost):
+        self.baseStringEffect = baseStringEffect
+        self.effectType = effectType
+        self.condition = condition
         self.effect = effect
         self.cost = cost
 
