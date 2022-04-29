@@ -28,10 +28,11 @@ class CardAbilityKeywords(str, Enum):
     ACTION = 'starting'
     AUTO = 'auto'
     ONCE_PER_TURN = 'turn_01'
+    TWICE_PER_TURN = 'turn_02'
     TEAM = 'team'
-    GUARD = 'Guard'
+    GUARD = 'guard_mini'
     MULTI_ENER = 'Multi Ener'
-    LIFE_BURST = 'life burst'
+    LIFE_BURST = 'life_burst'
     AUTO_TEAM = 'auto_team'
     ACTION_TEAM = 'starting_team'
     CONSTANT_TEAM = 'regular_team'
@@ -41,6 +42,7 @@ class CardAbilityKeywords(str, Enum):
     ONCE_PER_GAME = 'game_01'
     HARMONY = '[Harmony]'
     USE_CONDITIONS = 'terms_use'
+    EFFECT = 'card_effect'
 
 
 @unique
@@ -56,18 +58,16 @@ class COLORS(str, Enum):
         classAsDict(self)
 
 
-class Effect:
-    def __init__(self, baseStringEffect: string, effectType, condition, effect, cost):
-        self.baseStringEffect = baseStringEffect
-        self.effectType = effectType
-        self.condition = condition
-        self.effect = effect
-        self.cost = cost
-
-
-class CardEffects:
-    def __init__(self, effects: list[string] = None, lifeBust: string = None):
+class CardAbilities:
+    def __init__(self, effects: list[string] = None, life_burst: string = None):
         self.effects = effects
-        self.lifeBurst = lifeBust
+        self.life_burst = life_burst
 
 
+class Ability:
+    def __init__(self, effects: list[string], ability_type):
+        self.abilityType = ability_type
+        self.ability = effects
+
+    def asDict(self):
+        classAsDict(self)

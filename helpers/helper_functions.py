@@ -9,7 +9,7 @@ from selenium.webdriver.remote.webelement import WebElement
 
 from classes import WixossCard
 from classes.Costs import ColorCost
-from classes.card_attributes import COLORS, CardEffects
+from classes.card_attributes import COLORS, CardAbilities
 from helpers.parseEffects import parse_string
 
 
@@ -37,18 +37,18 @@ def get_cost_color(cost_char):
 
 # Get Color of card
 def get_color(srcString):
-    returnColor = ''
+    return_color = ''
     for color in COLORS:
         if color.value.casefold() in srcString.casefold():
-            returnColor = color.name
-    return returnColor
+            return_color = color.name
+    return return_color
 
 
 # Get Colors and their cost from the card, usually for spells and pieces
-def get_colors_and_cost(costString):
-    color_cost_array = costString.split(' ')
+def get_colors_and_cost(cost_string):
+    color_cost_array = cost_string.split(' ')
     parsed_colors_and_cost = []
-    if costString != '-':
+    if cost_string != '-':
         for color_and_cost in color_cost_array:
             item_pair = color_and_cost.split('×')
             color = parse_full_width_string(get_cost_color(item_pair[0]))
@@ -64,18 +64,19 @@ def get_colors_and_cost(costString):
     # Effects is effects[0]
     # LifeBurst is effects[1]
     # effects[3] is unknown right now, sig for sanbaka?
-def get_effects(effectsAndLifebursts: list[WebElement]):
-    if (len(effectsAndLifebursts)) != 0:
-        effect = effectsAndLifebursts[0].text
-        lifeBurst = effectsAndLifebursts[1].text
+def get_effects(effects_and_lifebursts: list[WebElement]):
+    if (len(effects_and_lifebursts)) != 0:
+        effect = effects_and_lifebursts[0].text
+        life_burst = effects_and_lifebursts[1].text
+        parsed_effect_array = None
+        parsed_life_burst = None
         if effect != '-':
-            effect = parse_string(effectsAndLifebursts[0].get_attribute('innerHTML')).split('\n')
-        else:
-            effect = ['-']
-        if lifeBurst != '-':
-            lifeBurst = parse_string(effectsAndLifebursts[1].get_attribute('innerHTML')).split('\n')
-        cardEffect = CardEffects(effect, lifeBurst)
-        return cardEffect
+            parsed_effect_array = parse_string(effects_and_lifebursts[0].get_attribute('innerHTML')).split('\n')
+        if life_burst != '-':
+            parsed_life_burst = parse_string(effects_and_lifebursts[1].get_attribute('innerHTML')).split('\n')
+
+        card_effect = CardAbilities(parsed_effect_array, parsed_life_burst)
+        return card_effect
 
 
 # Parse the string and convert full width to normal
@@ -90,36 +91,36 @@ def card_to_JSON(card: WixossCard):
 
 # Parse the string and convert CJK Chars to csv readable ones
 def parse_CJK_chars(string):
-    returnString = re.sub(r'\u3011', ']', string)
-    returnString = re.sub(r'\u3010', '[', returnString)
-    returnString = re.sub(r'\u300b', '', returnString)  # weird double angle bracket
-    returnString = re.sub(r'\u300a', '', returnString)
-    return returnString
+    return_string = re.sub(r'\u3011', ']', string)
+    return_string = re.sub(r'\u3010', '[', return_string)
+    return_string = re.sub(r'\u300b', '', return_string)  # weird double angle bracket
+    return_string = re.sub(r'\u300a', '', return_string)
+    return return_string
 
 
 # Parse circled digits, there should be more than 4
 def parse_circle_digits(string):
-    returnString = re.sub(r'\u2460', '(1)', string)
-    returnString = re.sub(r'\u2461', '(2)', returnString)
-    returnString = re.sub(r'\u2462', '(3)', returnString)
-    returnString = re.sub(r'\u2463', '(4)', returnString)
-    returnString = re.sub(r'\u2014', '-', returnString) # technically not a circle digit but w/e
-    return returnString
+    return_string = re.sub(r'\u2460', '(1)', string)
+    return_string = re.sub(r'\u2461', '(2)', return_string)
+    return_string = re.sub(r'\u2462', '(3)', return_string)
+    return_string = re.sub(r'\u2463', '(4)', return_string)
+    return_string = re.sub(r'\u2014', '-', return_string)  # technically not a circle digit but w/e
+    return return_string
 
 
 # Download the image to the specified path
-def download_image(downloadPath, imageURL, fileName):
-    imageContent = requests.get(imageURL).content
-    imageFile = io.BytesIO(imageContent)
-    image = Image.open(imageFile)
-    filePath = downloadPath + fileName
+def download_image(download_path, image_URL, file_name):
+    image_content = requests.get(image_URL).content
+    image_file = io.BytesIO(image_content)
+    image = Image.open(image_file)
+    file_path = download_path + file_name
 
-    if not os.path.isfile(filePath):
-        with open(filePath, "wb") as f:
+    if not os.path.isfile(file_path):
+        with open(file_path, "wb") as f:
             image.save(f, "JPEG")
         #print('Image Saved')
     else:
         pass
         #print('Image already Exists')
-    return filePath
+    return file_path
 

@@ -22,8 +22,6 @@ class WixossCard:
             team=None,
             effects=None,
             life_burst=None,
-            has_effects=None,
-            has_life_burst=None,
             coin=None,
             set_format=None,
             timing=None,
@@ -43,8 +41,6 @@ class WixossCard:
         self.team = team
         self.effects = effects
         self.life_burst = life_burst
-        self.has_effects = has_effects
-        self.has_life_burst = has_life_burst
         self.coin = coin
         self.set_format = set_format
         self.timing = timing
@@ -57,4 +53,6 @@ class WixossCard:
         wixossDict['image'] = to_dict(self.image)
         wixossDict['cost'] = to_dict(self.cost)
         wixossDict['grow_cost'] = to_dict(self.grow_cost)
+        wixossDict['effects'] = to_dict(self.effects)
+        wixossDict['life_burst'] = to_dict(self.life_burst)
         return wixossDict

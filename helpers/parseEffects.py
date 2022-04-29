@@ -2,12 +2,12 @@ import re
 from classes.card_attributes import COLORS, CardAbilityKeywords
 from helpers import helper_functions
 
-innerHTML = """<img src="./images/icon_txt_team.png" class="text_icon"> &lt;Ancient Surprise&gt;
+inner_HTML = """<img src="./images/icon_txt_team.png" class="text_icon"> &lt;Ancient Surprise&gt;
 <img src="./images/icon_txt_starting_team.png" class="text_icon"> <img src="./images/icon_txt_turn_01.png" class="text_icon"> <img src="./images/icon_txt_green_00.png" class="text_icon">: Target three SIGNI on your field with different classes get +3000 power until end of turn.
 <img src="./images/icon_txt_arrival.png" class="text_icon">: 【Ener Charge 2】. If the cards put into your Ener Zone this way do not share a class, 【Ener Charge 1】."""
 
-teamregex = r'&lt;(.*?)&gt;'
-imageregex = r'<.*?>'
+team_regex = r'&lt;(.*?)&gt;'
+image_regex = r'<.*?>'
 
 def convert_color(color: COLORS):
     symbol = ''
@@ -40,7 +40,9 @@ def convert_symbol(keyword: CardAbilityKeywords):
         case CardAbilityKeywords.AUTO:
             symbol = '(AUTO)'
         case CardAbilityKeywords.ONCE_PER_TURN:
-            symbol = '[Once]'
+            symbol = '[Once Per Turn]'
+        case CardAbilityKeywords.TWICE_PER_TURN:
+            symbol = '[Twice Per Turn]'
         case CardAbilityKeywords.TEAM:
             symbol = '(TEAM)'
         case CardAbilityKeywords.AUTO_TEAM:
@@ -59,6 +61,8 @@ def convert_symbol(keyword: CardAbilityKeywords):
             symbol = '[Once Per Game]'
         case CardAbilityKeywords.USE_CONDITIONS:
             symbol = '(Use Conditions)'
+        case CardAbilityKeywords.GUARD:
+            symbol = '[Guard]'
     return symbol
 
 
@@ -69,7 +73,7 @@ def fixAngleBrackets(inputString):
 
 
 def parse_images_in_string(inputString):
-    resultImgArray = re.findall(imageregex, inputString, re.I)
+    resultImgArray = re.findall(image_regex, inputString, re.I)
     returnString = inputString
     for j in range(len(resultImgArray)):
         imageToSub = resultImgArray[j]
@@ -95,7 +99,6 @@ def parse_string(inputString):
     returnString = helper_functions.parse_CJK_chars(returnString)
     returnString = helper_functions.parse_circle_digits(returnString)
     returnString = fixAngleBrackets(returnString)
-    print(returnString)
     return returnString
 
 
