@@ -14,7 +14,7 @@ from selenium.webdriver.remote.webelement import WebElement
 def parse_card(main_contents: WebElement, content_header: WebElement):
     image_download_path = 'resources/cardImages/'
 
-    rarity = content_header.find_element(By.CSS_SELECTOR, 'p.rarelity').text
+    rarity = main_contents.find_element(By.CSS_SELECTOR, 'p.rarelity').text
     card_name_with_serial = content_header.find_element(By.CSS_SELECTOR, 'div.sec_inner h2').text
     serial_number = content_header.find_element(By.CSS_SELECTOR, 'div.sec_inner h2 span').text
     card_name = card_name_with_serial.replace(serial_number, "").replace('\n', "")

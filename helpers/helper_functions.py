@@ -124,3 +124,7 @@ def download_image(download_path, image_URL, file_name):
         #print('Image already Exists')
     return file_path
 
+
+# Check if card exists in data set
+def checkIfExists(data, val):
+    return any(card['serial']['serialNumber'] == val for card in data['cardData'])
