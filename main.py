@@ -33,8 +33,8 @@ if __name__ == '__main__':
 
     # pages
     total_pages = 40
-    start_page = 1
-    pages_to_parse = 2
+    start_page = 40
+    pages_to_parse = 1
 
     # You start on page 1
     for p in range(start_page - 1):

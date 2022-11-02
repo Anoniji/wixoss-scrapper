@@ -55,16 +55,20 @@ def get_card_info(parsed_card: WixossCard, desc_tags: list[WebElement], desc_tag
             card_attribute_value = helper_functions.parse_full_width_string(tag_values_converted)
         elif i == 2:
             color_src_value = desc_tag_values[2].find_elements(By.TAG_NAME, 'img')
-            color_count = len(color_src_value)
-            card_attribute_value = []
-            if len(color_src_value) > 1:
-                for j in range(0, color_count):
-                    card_attribute_value.append(helper_functions.get_color(color_src_value[j].get_attribute('src')))
+            if color_src_value is None:
+                color_count = len(color_src_value)
+                card_attribute_value = []
+                if len(color_src_value) > 1:
+                    for j in range(0, color_count):
+                        card_attribute_value.append(helper_functions.get_color(color_src_value[j].get_attribute('src')))
+                else:
+                    card_attribute_value.append(helper_functions.get_color(color_src_value[0].get_attribute('src')))
             else:
-                card_attribute_value = helper_functions.get_color(color_src_value[0].get_attribute('src'))
+                card_attribute_value = None
         elif i == 4:
             # else its the 4th index which is the grow cost one
-            if card_type_value == helper_functions.CENTER_LRIG or card_type_value == helper_functions.ASSIST_LRIG:
+            if (card_type_value == helper_functions.CENTER_LRIG or card_type_value == helper_functions.ASSIST_LRIG) \
+                    and desc_tag_values[4].text != '-':
                 color_src_value = desc_tag_values[4].find_element(By.TAG_NAME, 'img')
                 grow_color = helper_functions.get_color(color_src_value.get_attribute('src'))
                 grow_cost = desc_tag_values[4].text.replace('×', '', 1)
