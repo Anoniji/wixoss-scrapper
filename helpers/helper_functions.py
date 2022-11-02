@@ -51,7 +51,8 @@ def get_colors_and_cost(cost_string):
     if cost_string != '-':
         for color_and_cost in color_cost_array:
             item_pair = color_and_cost.split('×')
-            color = parse_full_width_string(get_cost_color(item_pair[0]))
+            color_from_char = get_cost_color(item_pair[0])
+            color = parse_full_width_string(get_color(color_from_char))
             cost = parse_full_width_string(item_pair[1])
             parsed_item_pair = ColorCost(color, cost)
             parsed_colors_and_cost.append(parsed_item_pair)
@@ -64,6 +65,7 @@ def get_colors_and_cost(cost_string):
     # Effects is effects[0]
     # LifeBurst is effects[1]
     # effects[3] is unknown right now, sig for sanbaka?
+    # Cards with effects and lifeburts of '-' will return null instead
 def get_effects(effects_and_lifebursts: list[WebElement]):
     if (len(effects_and_lifebursts)) != 0:
         effect = effects_and_lifebursts[0].text

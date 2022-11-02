@@ -54,8 +54,8 @@ def get_card_info(parsed_card: WixossCard, desc_tags: list[WebElement], desc_tag
         if i == 1:
             card_attribute_value = helper_functions.parse_full_width_string(tag_values_converted)
         elif i == 2:
-            color_src_value = desc_tag_values[2].find_elements(By.TAG_NAME, 'img')
-            if color_src_value is None:
+            color_src_value = desc_tag_values[2].find_elements(By.TAG_NAME, 'img') # if not found, it returns an empty array? so its not None?
+            if len(color_src_value) >= 1:
                 color_count = len(color_src_value)
                 card_attribute_value = []
                 if len(color_src_value) > 1:
@@ -64,7 +64,7 @@ def get_card_info(parsed_card: WixossCard, desc_tags: list[WebElement], desc_tag
                 else:
                     card_attribute_value.append(helper_functions.get_color(color_src_value[0].get_attribute('src')))
             else:
-                card_attribute_value = None
+                card_attribute_value = [helper_functions.get_color('null')]
         elif i == 4:
             # else its the 4th index which is the grow cost one
             if (card_type_value == helper_functions.CENTER_LRIG or card_type_value == helper_functions.ASSIST_LRIG) \
