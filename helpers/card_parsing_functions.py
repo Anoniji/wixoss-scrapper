@@ -117,7 +117,7 @@ def assign_attribute(parsed_card: WixossCard, cardAttributeLabel: string, cardAt
         case CardAttributeLabels.TIMING:
             parsed_card.timing = cardAttributeValue
         case CardAttributeLabels.FORMAT:
-            parsed_card.set_format = cardAttributeValue
+            parsed_card.format = cardAttributeValue
 
 
 # Assign the effects and life burst to the card

@@ -23,7 +23,7 @@ class WixossCard:
             effects=None,
             life_burst=None,
             coin=None,
-            set_format=None,
+            format=None,
             timing=None,
             serial=None,
             image=None
@@ -42,7 +42,7 @@ class WixossCard:
         self.effects = effects
         self.life_burst = life_burst
         self.coin = coin
-        self.set_format = set_format
+        self.format = format
         self.timing = timing
         self.serial = serial
         self.image = image
