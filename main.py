@@ -32,9 +32,9 @@ if __name__ == '__main__':
     jsonPath = './resources/cards.json'
 
     # pages
-    total_pages = 42
+    total_pages = 56
     start_page = 1
-    pages_to_parse = 42
+    pages_to_parse = 56
 
     # You start on page 1
     for p in range(start_page - 1):
@@ -61,26 +61,28 @@ if __name__ == '__main__':
     total_card_count = driver.find_element(By.CSS_SELECTOR, 'p.results').text  # wrong amount on website?
     current_card_count = (start_page - 1) * 21
     tic = time.perf_counter()
-    for i in range(pages_to_parse):
-        current_page = start_page
-        print('On Page: ', current_page + i)
-        time.sleep(1)  # Hate to do it
-        wait = WebDriverWait(driver, 60)
-        wait.until(expected_conditions.visibility_of_any_elements_located((By.CSS_SELECTOR, 'div.sec_inner div.card')))
-        cards = driver.find_elements(By.CSS_SELECTOR, 'div.sec_inner div.card')
+    with open(jsonPath, 'r+', encoding='utf-8') as file:
+        data = json.load(file)
+        for i in range(pages_to_parse):
+            current_page = start_page
+            print('On Page: ', current_page + i)
+            time.sleep(1)  # Hate to do it
+            wait = WebDriverWait(driver, 60)
+            wait.until(expected_conditions.visibility_of_any_elements_located((By.CSS_SELECTOR, 'div.sec_inner div.card')))
+            cards = driver.find_elements(By.CSS_SELECTOR, 'div.sec_inner div.card')
 
-        for j in range(1, len(cards)):
-            card_to_parse = cards[j]
-            card_serial = card_to_parse.find_element(By.CSS_SELECTOR, 'p.cardNo').text
-            print(card_serial)
-            """
-                The Json file must be manually deleted after each run during the testing phase
-                The except allows you to create a new json file from an empty one
-            """
-            try:
-                with open(jsonPath, 'r', encoding='utf-8') as file:
-                    data = json.load(file)
-                    if helper_functions.checkIfExists(data, card_serial) is False:
+            for j in range(1, len(cards)):
+                card_to_parse = cards[j]
+                card_serial = card_to_parse.find_element(By.CSS_SELECTOR, 'p.cardNo').text
+                #print(card_serial)
+                """
+                    The Json file must be manually deleted after each run during the testing phase
+                    The except allows you to create a new json file from an empty one
+                """
+                try:
+                    card_exists = False
+                    card_exists = helper_functions.checkIfExists(data, card_serial)
+                    if card_exists is False:
                         # open the card in a new window
                         ActionChains(driver) \
                             .key_down(Keys.CONTROL) \
@@ -101,6 +103,13 @@ if __name__ == '__main__':
 
                         data["cardData"].append(parsed_card.asDict())
 
+                        # Write card to json and output
+                        file.seek(0)
+                        file.write(json.dumps(data, indent=4))
+                        current_card_output = Template('Card $current_card_count processed: $current_card_serial')
+                        print(current_card_output.substitute(current_card_count=current_card_count,
+                                                             current_card_serial=card_serial))
+
                         # close current tab and go back to parent window
                         driver.close()
 
@@ -111,27 +120,24 @@ if __name__ == '__main__':
                         wait.until(
                             expected_conditions.visibility_of_element_located((By.CSS_SELECTOR, 'div.contents_main')))
                     else:
-                        print('Card with serial ' + card_serial + ' exists.')
-                with open(jsonPath, 'w', encoding='utf-8') as file:
-                    file.write(json.dumps(data, indent=4))
-            except Exception as e:
-                print(e)
-                if os.path.exists(jsonPath):
-                    os.remove(jsonPath)
-                    print('Starting new Json file')
-                with open(jsonPath, "w", encoding='utf-8') as outfile:
-                    data = {"cardData": [parsed_card.asDict()]}
-                    outfile.write(json.dumps(data, indent=4))
-            current_card_count += 1
-            current_card_output = Template('Card $current_card_count processed: $current_card_serial')
-            print(current_card_output.substitute(current_card_count=current_card_count, current_card_serial=card_serial))
-
-        # Nav to next page
-        if pages_to_parse != 1 or (current_page + i) != total_pages:
-            next_button.click()
-            driver.switch_to.window(parent_window)
-        else:
-            print('Cards Parsed')
+                        exists_text = Template('Card $current_card_count already in JSON: $card_serial')
+                        print(exists_text.substitute(current_card_count=current_card_count, card_serial=card_serial))
+                    current_card_count += 1
+                except Exception as e:
+                    print('EXCEPTION CAUGHT')
+                    print(e)
+                    # if os.path.exists(jsonPath):
+                    #     os.remove(jsonPath)
+                    #     print('Starting new Json file')
+                    # with open(jsonPath, "w", encoding='utf-8') as outfile:
+                    #     data = {"cardData": [parsed_card.asDict()]}
+                    #     outfile.write(json.dumps(data, indent=4))
+            # Nav to next page
+            if pages_to_parse != 1 or (current_page + i) != total_pages:
+                next_button.click()
+                driver.switch_to.window(parent_window)
+            else:
+                print('Finished Card Parsing')
     driver.quit()
     toc = time.perf_counter()
     t = Template('Completed $current_card_count out of $total_card_count')

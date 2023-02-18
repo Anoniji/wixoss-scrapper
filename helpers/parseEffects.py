@@ -90,6 +90,10 @@ def parse_images_in_string(inputString):
                     convertedSymbol = convert_color(color)
                     processedForImage = True
                     break
+        if not processedForImage:
+            if imageToSub.find("coin") != -1:
+                convertedSymbol = "(COIN)"
+                processedForImage = True
         returnString = returnString.replace(imageToSub, convertedSymbol)
     return returnString
 
