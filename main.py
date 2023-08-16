@@ -1,145 +1,87 @@
-import json
-import os.path
+import os
+from random import randint
 import time
-from string import Template
+import requests
+from bs4 import BeautifulSoup
+import shutil
+import json
+import re
+import math
+from tqdm import tqdm
+import cutlet
+katsu = cutlet.Cutlet()
 
-from helpers import card_parsing_functions, helper_functions
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.common.action_chains import ActionChains
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions
+version = 'jp'
+rootUrl = "https://www.takaratomy.co.jp/products/wixoss"
+SearchUrl = rootUrl + "/card/card_list.php"
+vigs_by_page = 21
+count = 0
+CardInfo = {}
+post_form = {
+    'search': '1',
+    'keyword': '',
+    'card_kind': '',
+    'card_type': '',
+    'rarelity': '',
+    'support_formats[]': '1',
+    'x': '81',
+    'y': '30'
+}
+'''先通过条件找到最大搜索结果分页'''
+session = requests.Session()
+res = session.post(SearchUrl, data=post_form)
+res.encoding = 'utf-8'
+pageListSoup = BeautifulSoup(res.text, "html.parser")
+total_cards = pageListSoup.find(attrs="cont cardDip").find('span').string[:-1]
+maxPage = math.ceil(int(total_cards) / vigs_by_page)
 
-from resources.localenv import DRIVER_LOCATION, TAKARATOMY_LINK
+'''从每个页面分类上获得单卡url'''
+for i in tqdm(range(1, maxPage + 1), desc='Page: '):
+    res = session.get(SearchUrl + '?card_page=' + str(i))
+    res.encoding = 'utf-8'
+    cardListSoup = BeautifulSoup(res.text, "html.parser")
+    cardList = cardListSoup.find_all(class_='ajax cboxElement')
 
-if __name__ == '__main__':
-    ser = Service(DRIVER_LOCATION)
-    ops = webdriver.ChromeOptions()
-    # ops.headless = True  # headless causes issues when changing pages
-    ops.add_argument('--window-size=1920,1080')
-    ops.add_argument('--start-maximized')
-    ops.add_argument('--lang=en_US')  # Required to make it run headless
-    driver = webdriver.Chrome(service=ser, options=ops)
-    driver.get(TAKARATOMY_LINK)
-    parent_window = driver.window_handles[0]
+    '''从单卡页面上获得卡面信息'''
+    for card_pos in tqdm(range(0, len(cardList)), leave=False, desc='Card: '):
+        card = cardList[card_pos]
+        resCard = session.get(SearchUrl + card['href'])
+        resCard.encoding = 'utf-8'
+        cardSoup = BeautifulSoup(resCard.text, "html.parser")
 
-    # Page Navigation Buttons
-    page_buttons = driver.find_elements(By.CSS_SELECTOR, 'div.page-nav div.pure-button')
-    next_button = driver.find_element(By.XPATH, "//div[text()='>']")
+        cardInfo = dict()
+        cardInfo['wxid'] = cardSoup.find(class_='cardNum').string
+        cardInfo['name'] = cardSoup.find(class_='cardName').get_text(strip=True)
+        cardInfo['name_romanji'] = False
+        if version == 'jp':
+            cardInfo['name_romanji'] = katsu.romaji(cardInfo['name'])
+        rarity = cardSoup.find(class_='cardRarity').string
+        cardInfo['rarity'] = re.sub('\W+', '', rarity)
+        cardInfo['cardImg'] = cardSoup.find(class_='cardImg').find('img')['src']
 
-    jsonPath = './resources/cards.json'
+        cardInfo['cardData'] = {}
+        cardData_titles = cardSoup.find(class_='cardData').findAll('dt')
+        cardData_contents = cardSoup.find(class_='cardData').findAll('dd')
+        for pos_data in range(len(cardData_titles)):
+            cardData_title = katsu.romaji(cardData_titles[pos_data].get_text(strip=True))
+            cardData_content = cardData_contents[pos_data].get_text(strip=True)
+            cardInfo['cardData'][cardData_title] = cardData_content
 
-    # pages
-    total_pages = 56
-    start_page = 1
-    pages_to_parse = 56
+        cardInfo['illust'] = cardSoup.find(class_='cardImg').find('span').get_text(strip=True)
 
-    # You start on page 1
-    for p in range(start_page - 1):
-        next_button.click()
-        driver.switch_to.window(parent_window)
-        time.sleep(4)  # Hate to do it
-        wait = WebDriverWait(driver, 60)
-        wait.until(expected_conditions.visibility_of_any_elements_located((By.CSS_SELECTOR, 'div.sec_inner div.card')))
+        directory_output = './cards_' + version
+        if not os.path.isdir(directory_output):
+            os.mkdir(directory_output)
 
-    """
-    Block used when there were pagination wasn't a thing
-    """
-    # page_button_output = Template('Clicking $page_button')
-    # print(page_button_output.substitute(page_button=start_page))
-    # page_buttons[start_page - 1].click()
-    """
-    End Block
-    """
+        res = requests.get(cardInfo['cardImg'], stream=True)
+        if res.status_code == 200:
+            with open(directory_output + '/' + cardInfo['wxid'] + '.jpg', 'wb') as f:
+                shutil.copyfileobj(res.raw, f)
 
-    time.sleep(5)  # Hate to do it
-    wait = WebDriverWait(driver, 60)
-    wait.until(expected_conditions.visibility_of_any_elements_located((By.CSS_SELECTOR, 'div.sec_inner div.card')))
 
-    total_card_count = driver.find_element(By.CSS_SELECTOR, 'p.results').text  # wrong amount on website?
-    current_card_count = (start_page - 1) * 21
-    tic = time.perf_counter()
-    with open(jsonPath, 'r+', encoding='utf-8') as file:
-        data = json.load(file)
-        for i in range(pages_to_parse):
-            current_page = start_page
-            print('On Page: ', current_page + i)
-            time.sleep(1)  # Hate to do it
-            wait = WebDriverWait(driver, 60)
-            wait.until(expected_conditions.visibility_of_any_elements_located((By.CSS_SELECTOR, 'div.sec_inner div.card')))
-            cards = driver.find_elements(By.CSS_SELECTOR, 'div.sec_inner div.card')
+        json_object = json.dumps(cardInfo, indent=4)
+        with open(directory_output + '/' + cardInfo['wxid'] + '.json', 'w', encoding='utf-8') as outfile:
+            outfile.write(json_object)
 
-            for j in range(1, len(cards)):
-                card_to_parse = cards[j]
-                card_serial = card_to_parse.find_element(By.CSS_SELECTOR, 'p.cardNo').text
-                #print(card_serial)
-                """
-                    The Json file must be manually deleted after each run during the testing phase
-                    The except allows you to create a new json file from an empty one
-                """
-                try:
-                    card_exists = False
-                    card_exists = helper_functions.checkIfExists(data, card_serial)
-                    if card_exists is False:
-                        # open the card in a new window
-                        ActionChains(driver) \
-                            .key_down(Keys.CONTROL) \
-                            .click(card_to_parse) \
-                            .key_up(Keys.CONTROL) \
-                            .perform()
-
-                        # switch to newly opened tab, this command switches the driver url`
-                        driver.switch_to.window(driver.window_handles[1])
-                        wait = WebDriverWait(driver, 30)
-                        wait.until(expected_conditions.visibility_of_element_located((By.TAG_NAME, 'dt')))
-
-                        # Parsing the card
-                        card_main_contents = driver.find_element(By.CSS_SELECTOR, 'div.contents_main')
-                        card_header_contents = driver.find_element(By.CSS_SELECTOR, 'div.contents_header')
-                        parsed_card = card_parsing_functions.parse_card(card_main_contents, card_header_contents)
-                        parsed_card_serial = parsed_card.serial.serialNumber
-
-                        data["cardData"].append(parsed_card.asDict())
-
-                        # Write card to json and output
-                        file.seek(0)
-                        file.write(json.dumps(data, indent=4))
-                        current_card_output = Template('Card $current_card_count processed: $current_card_serial')
-                        print(current_card_output.substitute(current_card_count=current_card_count,
-                                                             current_card_serial=card_serial))
-
-                        # close current tab and go back to parent window
-                        driver.close()
-
-                        # Reset driver to the card list page
-                        driver.switch_to.window(parent_window)
-                        # time.sleep(1)  # Hate to do it
-                        wait = WebDriverWait(driver, 60)
-                        wait.until(
-                            expected_conditions.visibility_of_element_located((By.CSS_SELECTOR, 'div.contents_main')))
-                    else:
-                        exists_text = Template('Card $current_card_count already in JSON: $card_serial')
-                        print(exists_text.substitute(current_card_count=current_card_count, card_serial=card_serial))
-                    current_card_count += 1
-                except Exception as e:
-                    print('EXCEPTION CAUGHT')
-                    print(e)
-                    # if os.path.exists(jsonPath):
-                    #     os.remove(jsonPath)
-                    #     print('Starting new Json file')
-                    # with open(jsonPath, "w", encoding='utf-8') as outfile:
-                    #     data = {"cardData": [parsed_card.asDict()]}
-                    #     outfile.write(json.dumps(data, indent=4))
-            # Nav to next page
-            if pages_to_parse != 1 or (current_page + i) != total_pages:
-                next_button.click()
-                driver.switch_to.window(parent_window)
-            else:
-                print('Finished Card Parsing')
-    driver.quit()
-    toc = time.perf_counter()
-    t = Template('Completed $current_card_count out of $total_card_count')
-    print(t.substitute(current_card_count=current_card_count, total_card_count=total_card_count))
-    print(f"Program End: Downloaded the cards in {toc - tic:0.4f} seconds")
+        delay = randint(1, 3)
+        time.sleep(delay)
