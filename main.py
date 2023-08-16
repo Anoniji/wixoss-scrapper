@@ -12,9 +12,15 @@ import cutlet
 katsu = cutlet.Cutlet()
 
 version = 'jp'
-rootUrl = "https://www.takaratomy.co.jp/products/wixoss"
-SearchUrl = rootUrl + "/card/card_list.php"
-vigs_by_page = 21
+rootUrl = {
+    'jp': 'https://www.takaratomy.co.jp/products/wixoss',
+    'en': 'https://www.takaratomy.co.jp/products/en.wixoss'
+}
+
+SearchUrl = rootUrl[version] + "/card/card_list.php"
+cards_by_page = 21
+start_page = 1
+
 count = 0
 CardInfo = {}
 post_form = {
@@ -33,10 +39,10 @@ res = session.post(SearchUrl, data=post_form)
 res.encoding = 'utf-8'
 pageListSoup = BeautifulSoup(res.text, "html.parser")
 total_cards = pageListSoup.find(attrs="cont cardDip").find('span').string[:-1]
-maxPage = math.ceil(int(total_cards) / vigs_by_page)
+maxPage = math.ceil(int(total_cards) / cards_by_page)
 
 '''从每个页面分类上获得单卡url'''
-for i in tqdm(range(1, maxPage + 1), desc='Page: '):
+for i in tqdm(range(start_page, maxPage + 1), desc='Page: '):
     res = session.get(SearchUrl + '?card_page=' + str(i))
     res.encoding = 'utf-8'
     cardListSoup = BeautifulSoup(res.text, "html.parser")
@@ -63,7 +69,10 @@ for i in tqdm(range(1, maxPage + 1), desc='Page: '):
         cardData_titles = cardSoup.find(class_='cardData').findAll('dt')
         cardData_contents = cardSoup.find(class_='cardData').findAll('dd')
         for pos_data in range(len(cardData_titles)):
-            cardData_title = katsu.romaji(cardData_titles[pos_data].get_text(strip=True))
+            if version == 'jp':
+                cardData_title = katsu.romaji(cardData_titles[pos_data].get_text(strip=True))
+            else:
+                cardData_title = cardData_titles[pos_data].get_text(strip=True)
             cardData_content = cardData_contents[pos_data].get_text(strip=True)
             cardInfo['cardData'][cardData_title] = cardData_content
 
