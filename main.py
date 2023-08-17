@@ -22,11 +22,10 @@ if version == 'jp':
 else:
     SearchUrl = rootUrl[version] + "/card/itemsearch.php"
 
-
-# /card/itemsearch.php?p=0&ord=asc&sor=&tex=couc&_=1692264910944
-
+epoch_time = '1692264910944' # start session with ms
 cards_by_page = 21
-start_page = 1 # 33
+start_page = 0 # 33
+# [en] start 0 / [jp] start 1
 
 count = 0
 CardInfo = {}
@@ -59,7 +58,7 @@ for i in tqdm(range(start_page, maxPage + 1), desc='Page: '):
     if version == 'jp':
         res = session.get(SearchUrl + '?card_page=' + str(i))
     else:
-        res = session.get(SearchUrl + '?p=' + str(i) + '&ord=asc&sor=&_=1692265106667')
+        res = session.get(SearchUrl + '?p=' + str(i) + '&ord=asc&sor=&_=' + epoch_time)
 
     res.encoding = 'utf-8'
     cardListSoup = BeautifulSoup(res.text, "html.parser")
